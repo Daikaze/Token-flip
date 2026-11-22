@@ -1,0 +1,25 @@
+name: Test and package Fast Flip
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node --check module.mjs && node --check jsx-dom.mjs && node --test tests/*.mjs
+      - name: Publish versioned package
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="v$(jq -r .version module.json)"
+          zip -q -r fast-flip.zip module.json module.mjs jsx-dom.mjs styles lang icons LICENSE LICENSE-jsx-dom CC-BY-4.0 README.md
+          unzip -tq fast-flip.zip
+          if ! gh release view "$tag" >/dev/null 2>&1; then
+            gh release create "$tag" fast-flip.zip module.json --target "$GITHUB_SHA" --title "Fast Flip $tag for Foundry v13 and v14" --notes "Foundry compatibility port of MrByte's Fast Flip 6.0.0."
+          fi
